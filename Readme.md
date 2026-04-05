@@ -1,103 +1,84 @@
-# 📄 AI Resume Reviewer
+# AI Resume Reviewer
 
-AI Resume Reviewer is a Streamlit-based web app that analyzes uploaded resumes (PDF) for structure, keyword density, and readability. It uses NLP techniques to identify common resume gaps and suggest improvements — helping job seekers better tailor their resumes for recruiters and applicant tracking systems (ATS).
-
----
-
-## 🚀 Features
-
-- 📄 Upload and preview PDF resumes
-- 🔍 Extract and analyze resume text
-- 🧠 Evaluate keyword usage, section structure, and action verbs
-- ✍️ Provide feedback and suggestions (via OpenAI or rule-based logic)
-- 📊 Visualize resume data (coming soon)
+A Streamlit web app that analyzes uploaded PDF resumes and gives instant, actionable feedback on ATS compatibility, section structure, action verb quality, keyword density, and readability — with optional AI-powered feedback via OpenAI.
 
 ---
 
-## 📆 Tech Stack
+## Features
+
+- **ATS Score (0–100)** — scored across section completeness, keyword match, and length
+- **Section Detection** — checks for Experience, Education, Skills, Projects, Summary, Certifications
+- **Action Verb Analysis** — flags strong vs. weak verbs with counts
+- **Keyword Density** — bar chart of top resume keywords
+- **ATS Keyword Match** — checks against 25 common ATS keywords
+- **Readability Checks** — detects quantifiable achievements, LinkedIn/GitHub URLs, long bullets
+- **Rule-Based Feedback** — specific, numbered suggestions for improvement
+- **AI Feedback** — optional GPT-4o-mini analysis via OpenAI API
+
+---
+
+## Tech Stack
 
 - **Frontend:** Streamlit
-- **Backend/NLP:** Python, spaCy or OpenAI API
-- **PDF Parsing:** PyMuPDF (`fitz`) or PyPDF2
+- **PDF Parsing:** PyPDF2
+- **Analysis:** Python (regex, collections, custom NLP logic)
+- **Charts:** Matplotlib, NumPy
+- **AI Feedback:** OpenAI API (optional)
 
 ---
 
-## 📂 Project Structure
+## Project Structure
 
 ```
 ai-resume-reviewer/
-├── app.py               # Main Streamlit app
-├── analyzer.py          # Scoring & NLP logic
-├── utils.py             # PDF/text parsing helpers
-├── sample_resume.pdf    # Sample for testing
-├── requirements.txt     # Python dependencies
-└── README.md            # Project overview
+├── app.py           # Streamlit UI and dashboard
+├── analyzer.py      # All analysis logic (sections, verbs, ATS, readability, OpenAI)
+├── requirements.txt
+├── .env.example
+└── README.md
 ```
 
 ---
 
-## ⚙️ Setup Instructions
+## Setup
 
-1. **Clone the repo** and navigate into it:
-
+**1. Clone and install**
 ```bash
-git clone https://github.com/your-username/ai-resume-reviewer
+git clone https://github.com/Hassankusow/ai-resume-reviewer
 cd ai-resume-reviewer
-```
-
-2. **Create a virtual environment:**
-
-```bash
-python3 -m venv venv
-source venv/bin/activate  # For macOS/Linux
-```
-
-3. **Install dependencies:**
-
-```bash
 pip install -r requirements.txt
 ```
 
-4. **Run the app:**
+**2. (Optional) Add OpenAI API key for AI feedback**
+```bash
+cp .env.example .env
+# Add your key: OPENAI_API_KEY=your_key_here
+```
 
+**3. Run the app**
 ```bash
 streamlit run app.py
 ```
 
----
-
-## 📌 Sample Use Case
-
-1. Upload your resume (PDF)
-2. See extracted text preview
-3. Review detected structure and keyword feedback
-4. Improve your resume for recruiter readability and ATS parsing
+Then upload any PDF resume — results appear instantly.
 
 ---
 
-## ✅ Future Improvements
+## How It Works
 
-- Resume scoring based on ATS guidelines
-- Integration with job descriptions for keyword matching
-- Downloadable feedback reports
-- Visual analytics (word clouds, section heatmaps)
-
----
-
-## 🙌 Contributing
-
-Pull requests are welcome!
-Feel free to open an issue or submit a PR to improve scoring, add better NLP checks, or enhance the UI.
+| Module | What it does |
+|--------|-------------|
+| `detect_sections()` | Scans for 7 standard resume sections by keyword matching |
+| `analyze_action_verbs()` | Scores 30+ strong verbs, flags weak ones like "helped" or "assisted" |
+| `analyze_keyword_density()` | Counts word frequency after stopword filtering |
+| `compute_ats_score()` | 100-point score: 40pts sections + 40pts keywords + 20pts length |
+| `analyze_readability()` | Checks for numbers, URLs, bullet length |
+| `build_rule_based_feedback()` | Generates specific improvement suggestions |
+| `get_openai_feedback()` | Calls GPT-4o-mini for AI-generated review (requires API key) |
 
 ---
 
-## 📃 License
-
-This project is licensed under the [MIT License](LICENSE).
-
----
-
-## 👤 Author
+## Author
 
 **Hassan Abdi**
-[GitHub](https://github.com/Hassankusow) | [LinkedIn](https://www.linkedin.com/in/hassan-abdi-119357267)
+[GitHub](https://github.com/Hassankusow) | [LinkedIn](https://linkedin.com/in/hassan-abdi-119357267)
