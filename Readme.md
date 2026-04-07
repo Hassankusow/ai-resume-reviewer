@@ -1,5 +1,7 @@
 # AI Resume Reviewer
 
+[![Tests](https://github.com/Hassankusow/ai-resume-reviewer/actions/workflows/tests.yml/badge.svg)](https://github.com/Hassankusow/ai-resume-reviewer/actions/workflows/tests.yml)
+
 A Streamlit web app that analyzes uploaded PDF resumes and gives instant, actionable feedback on ATS compatibility, section structure, action verb quality, keyword density, and readability — with optional AI-powered feedback via OpenAI.
 
 ---
