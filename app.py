@@ -15,12 +15,22 @@ st.set_page_config(
 # ─── Header ──────────────────────────────────────────────────────────────────
 
 st.title("📄 AI Resume Reviewer")
-st.markdown("Upload your resume and get instant feedback on structure, keywords, ATS score, and more.")
+st.markdown("Upload your resume and paste a job description to see exactly how you score against the role — just like real ATS systems.")
 st.divider()
 
-# ─── File Upload ─────────────────────────────────────────────────────────────
+# ─── Inputs ──────────────────────────────────────────────────────────────────
 
-uploaded_file = st.file_uploader("Upload your resume (PDF)", type="pdf")
+col_upload, col_jd = st.columns([1, 1])
+
+with col_upload:
+    uploaded_file = st.file_uploader("Upload your resume (PDF)", type="pdf")
+
+with col_jd:
+    jd_text = st.text_area(
+        "Paste job description (optional but recommended)",
+        height=160,
+        placeholder="Paste the full job posting here — we'll score your resume against the exact keywords and requirements this company is looking for.",
+    )
 
 if uploaded_file is None:
     st.info("Upload a PDF resume to get started.")
@@ -44,7 +54,7 @@ if not resume_text.strip():
 # ─── Run Analysis ────────────────────────────────────────────────────────────
 
 with st.spinner("Analyzing your resume..."):
-    report = analyze_resume(resume_text)
+    report = analyze_resume(resume_text, jd_text if jd_text and jd_text.strip() else None)
 
 ats         = report["ats"]
 verbs       = report["verbs"]
@@ -53,6 +63,7 @@ sections    = report["sections"]
 readability = report["readability"]
 feedback    = report["feedback"]
 ai_feedback = report["ai_feedback"]
+jd_match    = report["jd_match"]
 
 # ─── Score Overview ───────────────────────────────────────────────────────────
 
@@ -89,6 +100,54 @@ st.pyplot(fig)
 plt.close()
 
 st.divider()
+
+# ─── JD Match ────────────────────────────────────────────────────────────────
+
+if jd_match:
+    st.subheader("🎯 Job Description Match")
+
+    pct = jd_match["match_pct"]
+    color = "#2ecc71" if pct >= 70 else ("#f39c12" if pct >= 45 else "#e74c3c")
+    label = "Strong match" if pct >= 70 else ("Moderate match" if pct >= 45 else "Low match — needs work"  )
+
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("JD Match Score", f"{pct}%", delta=label)
+    with col2:
+        st.metric("Keywords Matched", len(jd_match["matched"]))
+    with col3:
+        st.metric("Keywords Missing", len(jd_match["missing"]))
+
+    fig, ax = plt.subplots(figsize=(10, 1.0))
+    ax.barh(["Match"], [pct],       color=color,    height=0.5)
+    ax.barh(["Match"], [100 - pct], left=[pct],   color="#ecf0f1", height=0.5)
+    ax.set_xlim(0, 100)
+    ax.axvline(70, color="green",  linestyle="--", linewidth=1, alpha=0.6, label="Strong (70%)")
+    ax.axvline(45, color="orange", linestyle="--", linewidth=1, alpha=0.6, label="Moderate (45%)")
+    ax.set_xlabel("Match %")
+    ax.legend(fontsize=7, loc="upper left")
+    plt.tight_layout()
+    st.pyplot(fig)
+    plt.close()
+
+    col_matched, col_missing = st.columns(2)
+    with col_matched:
+        st.markdown("**✅ Keywords found in your resume:**")
+        if jd_match["matched"]:
+            st.success("  ".join(f"`{k}`" for k in jd_match["matched"]))
+        else:
+            st.warning("No JD keywords found in your resume.")
+    with col_missing:
+        st.markdown("**❌ Keywords missing from your resume:**")
+        if jd_match["missing"]:
+            st.error("  ".join(f"`{k}`" for k in jd_match["missing"]))
+        else:
+            st.success("You're covering all the key terms!")
+
+    st.divider()
+else:
+    st.info("💡 Paste a job description above to see how your resume scores against this specific role.")
+    st.divider()
 
 # ─── Section & Contact ───────────────────────────────────────────────────────
 

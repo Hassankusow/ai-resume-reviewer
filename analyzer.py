@@ -208,31 +208,87 @@ def build_rule_based_feedback(sections: dict, verbs: dict,
     return feedback
 
 
-def get_openai_feedback(resume_text: str):
+def match_against_jd(resume_text: str, jd_text: str) -> dict:
+    """
+    Compare resume against a job description.
+    Extracts meaningful terms from JD and scores how many appear in the resume.
+    Returns match %, matched terms, and missing terms.
+    """
+    stopwords = {
+        "the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for",
+        "of", "with", "by", "from", "is", "was", "are", "were", "be", "been",
+        "have", "has", "had", "will", "would", "could", "should", "may", "can",
+        "this", "that", "we", "you", "they", "our", "your", "their", "its",
+        "as", "not", "also", "into", "up", "about", "using", "including",
+        "experience", "work", "working", "knowledge", "ability", "skills",
+        "required", "preferred", "plus", "strong", "excellent", "good",
+        "must", "role", "team", "position", "candidate", "looking", "join",
+        "help", "support", "build", "understand", "new", "high", "etc",
+    }
+
+    # Extract 1-gram and 2-gram terms from JD
+    jd_lower = jd_text.lower()
+    words = re.findall(r"\b[a-z][a-z0-9+#./-]{1,}\b", jd_lower)
+    filtered = [w for w in words if w not in stopwords and len(w) >= 3]
+
+    # Build bigrams (e.g. "machine learning", "ci/cd", "rest api")
+    bigrams = [f"{filtered[i]} {filtered[i+1]}" for i in range(len(filtered) - 1)]
+
+    # Score by frequency in JD — more frequent = more important
+    term_counts = Counter(filtered + bigrams)
+
+    # Take the top 40 most-mentioned terms as the "required" set
+    jd_terms = [term for term, _ in term_counts.most_common(40)]
+
+    resume_lower = resume_text.lower()
+    matched = [t for t in jd_terms if t in resume_lower]
+    missing = [t for t in jd_terms if t not in resume_lower]
+
+    match_pct = round(len(matched) / len(jd_terms) * 100) if jd_terms else 0
+
+    return {
+        "match_pct":   match_pct,
+        "matched":     matched,
+        "missing":     missing[:15],   # top missing terms
+        "total_jd_terms": len(jd_terms),
+    }
+
+
+def get_openai_feedback(resume_text: str, jd_text: str = None):
     """Call OpenAI API for AI-generated resume feedback. Returns None if no API key."""
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
         return None
+
+    if jd_text and jd_text.strip():
+        system_msg = (
+            "You are an expert resume coach and ATS specialist. "
+            "A candidate is applying for the job described below. "
+            "Review their resume and give 5-6 specific, actionable suggestions "
+            "to better match this role. Call out missing keywords, weak framing, "
+            "and quick wins. Be direct and specific."
+        )
+        user_msg = (
+            f"JOB DESCRIPTION:\n{jd_text[:2000]}\n\n"
+            f"RESUME:\n{resume_text[:2500]}"
+        )
+    else:
+        system_msg = (
+            "You are an expert resume coach and technical recruiter. "
+            "Analyze the resume and provide 5-6 specific, actionable suggestions "
+            "to improve it for software engineering roles. Be concise and direct."
+        )
+        user_msg = f"Please review this resume:\n\n{resume_text[:3000]}"
 
     try:
         client = OpenAI(api_key=api_key)
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
-                {
-                    "role": "system",
-                    "content": (
-                        "You are an expert resume coach and technical recruiter. "
-                        "Analyze the resume and provide 4-6 specific, actionable suggestions "
-                        "to improve it for software engineering roles. Be concise and direct."
-                    ),
-                },
-                {
-                    "role": "user",
-                    "content": f"Please review this resume:\n\n{resume_text[:3000]}",
-                },
+                {"role": "system", "content": system_msg},
+                {"role": "user",   "content": user_msg},
             ],
-            max_tokens=600,
+            max_tokens=700,
             temperature=0.7,
         )
         return response.choices[0].message.content
@@ -242,7 +298,7 @@ def get_openai_feedback(resume_text: str):
 
 # ─── Full Analysis ────────────────────────────────────────────────────────────
 
-def analyze_resume(text: str) -> dict:
+def analyze_resume(text: str, jd_text: str = None) -> dict:
     """Run all analysis passes and return a complete report."""
     sections    = detect_sections(text)
     verbs       = analyze_action_verbs(text)
@@ -250,7 +306,8 @@ def analyze_resume(text: str) -> dict:
     ats         = compute_ats_score(text, sections)
     readability = analyze_readability(text)
     feedback    = build_rule_based_feedback(sections, verbs, ats, readability)
-    ai_feedback = get_openai_feedback(text)
+    ai_feedback = get_openai_feedback(text, jd_text)
+    jd_match    = match_against_jd(text, jd_text) if jd_text and jd_text.strip() else None
 
     return {
         "sections":    sections,
@@ -260,4 +317,5 @@ def analyze_resume(text: str) -> dict:
         "readability": readability,
         "feedback":    feedback,
         "ai_feedback": ai_feedback,
+        "jd_match":    jd_match,
     }
