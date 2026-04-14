@@ -19,9 +19,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: |
-          pip install pandas numpy matplotlib pytest
-          pip install PyPDF2 python-dotenv
+        run: pip install -r requirements.txt pytest
 
       - name: Run tests
         run: pytest test_analyzer.py -v
